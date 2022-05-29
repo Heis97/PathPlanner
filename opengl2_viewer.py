@@ -1,7 +1,5 @@
 #from socket import *
-from asyncio.windows_events import NULL
-from asyncore import poll3
-from ctypes import pointer
+
 import socket
 import sys
 import time
@@ -20,18 +18,18 @@ import OpenGL.GL as gl
 from polygon import Mesh3D, Point3D,PrimitiveType
 
 class Paint_in_GL(object):
-    matrs:list[list[list[float]]] = None
+    matrs:"list[list[list[float]]]" = None
     red = 0.
     green = 0.
     blue = 0.
     size = 1.
     alpha = 1
-    norm:list[Point3D] = NULL
+    norm:"list[Point3D]" = None
     obj_type:PrimitiveType
-    points:list[Point3D]
+    points:"list[Point3D]"
     p2 = []
     p3 = []
-    mesh_obj: Mesh3D = NULL
+    mesh_obj: Mesh3D = None
     def __init__(self, _red,  _green,  _blue,_size,_type:PrimitiveType,  _mesh_obj:Mesh3D):
         self.red = _red
         self.green = _green
@@ -40,7 +38,7 @@ class Paint_in_GL(object):
         self.obj_type = _type
         self.mesh_obj = _mesh_obj
 
-    def setTrasform(self,matr:list[list[float]]):
+    def setTrasform(self,matr:"list[list[float]]"):
         trans_mesh = self.mesh_obj.setTransform(matr)
         return trans_mesh
 
@@ -68,7 +66,7 @@ class Paint_in_GL(object):
         f.close()
         
 class GLWidget(QOpenGLWidget):
-    paint_objs:list[Paint_in_GL]  = []
+    paint_objs:"list[Paint_in_GL]"  = []
     
     render_count = 0
     def __init__(self, parent=None):
@@ -116,7 +114,7 @@ class GLWidget(QOpenGLWidget):
   
     
 
-    def GL_paint(self,  paint_gls: list[Paint_in_GL]):
+    def GL_paint(self,  paint_gls: "list[Paint_in_GL]"):
 
         for i in range(len(paint_gls)):
             mesh_obj = paint_gls[i].mesh_obj
@@ -174,7 +172,7 @@ class GLWidget(QOpenGLWidget):
                     p2 = mesh_obj.polygons[j].vert_arr[1] 
                     p3 = mesh_obj.polygons[j].vert_arr[2]   
                     n = mesh_obj.polygons[j].n
-                    if(n !=NULL):        
+                    if(n !=None):        
                         gl.glNormal3d(n.x, n.y, n.z)
                     gl.glVertex3d(p1.x,p1.y,p1.z)
                     gl.glVertex3d(p2.x,p2.y,p2.z)
@@ -251,7 +249,7 @@ class GLWidget(QOpenGLWidget):
     '''def paint_1d(self,points1d:list[Point3D],r:float,g:float,b:float):
         norms:list[Point3D] = []
 
-        gl_obj = Paint_in_GL(r,g,b,1,PrimitiveType.lines,NULL,points1d)
+        gl_obj = Paint_in_GL(r,g,b,1,PrimitiveType.lines,None,points1d)
         gl_obj.norm = norms
         return gl_obj
 
@@ -283,12 +281,12 @@ class GLWidget(QOpenGLWidget):
                 points1d.append(p2)
                 points1d.append(p3)
 
-        gl_obj = Paint_in_GL(r,g,b,1,PrimitiveType.triangles, NULL,points1d)
+        gl_obj = Paint_in_GL(r,g,b,1,PrimitiveType.triangles, None,points1d)
         gl_obj.norm = norms
         return gl_obj'''
 
 
-    def gridToTriangleMesh(self,points2d:list[list[Point3D]]):
+    def gridToTriangleMesh(self,points2d:"list[list[Point3D]]"):
         points1d:list[Point3D] = []
         
         for i in range(len(points2d)-1):

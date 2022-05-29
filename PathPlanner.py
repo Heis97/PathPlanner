@@ -1,8 +1,4 @@
-from asyncio.windows_events import NULL
-from audioop import cross
-from cmath import sqrt
-from operator import sub
-from pickle import TRUE
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import interpolate
@@ -17,7 +13,7 @@ def rotate_point(x: float, y: float, alfa: float):
     y_r = x * np.sin(alfa) + y * np.cos(alfa)
     return x_r, y_r
 
-def rotate_list_points(points: list[Point3D], alfa: float):
+def rotate_list_points(points: "list[Point3D]", alfa: float):
     rotated_points = []
     for i in range(len(points)):
         p_r_x, p_r_y = rotate_point(points[i].x, points[i].y, alfa)
@@ -84,8 +80,8 @@ def area_around_point(mesh: Mesh3D, p: Point3D, r_area: float):
             polygons_array.append(mesh.polygons[i]) 
     return polygons_array
 
-def comp_normal_in_area(pol_list: list[Polygon3D]):
-    if pol_list != NULL:
+def comp_normal_in_area(pol_list: "list[Polygon3D]"):
+    if pol_list != None:
         if len(pol_list) != 0:
             sum_norm = Point3D(0, 0, 0)
             for i in range (len(pol_list)):
@@ -121,7 +117,7 @@ def computeXvector(p1:Point3D,p2:Point3D):
     pd = pd.normalyse()
     return pd
 
-def matrix_of_rotation(traj:list[Point3D],normals:list[Point3D], mesh: Mesh3D):
+def matrix_of_rotation(traj:"list[Point3D]",normals:"list[Point3D]", mesh: Mesh3D):
     matr_arr = []
     for i in range(len(traj)-1):
         rx = computeXvector(traj[i],traj[i+1])
@@ -134,7 +130,7 @@ def matrix_of_rotation(traj:list[Point3D],normals:list[Point3D], mesh: Mesh3D):
         matr_arr.append(matr)
     return matr_arr
 
-def projection(mesh: Mesh3D, traj: Mesh3D, zet: float, r:float,g:float,b:float)->tuple[list[Point3D],list[Point3D]]:
+def projection(mesh: Mesh3D, traj: Mesh3D, zet: float, r:float,g:float,b:float)->"tuple[list[Point3D],list[Point3D]]":
     traj_proj_arr_:list[Point3D] = []
     traj_proj_arr_n:list[Point3D] = []
     for i in range (len(traj.polygons)):
@@ -147,15 +143,15 @@ def projection(mesh: Mesh3D, traj: Mesh3D, zet: float, r:float,g:float,b:float)-
         traj_proj_arr_n.append(n)
     return traj_proj_arr_,traj_proj_arr_n
 
-def point_on_triangle(mesh: Mesh3D, polygon: Polygon3D)->tuple[Point3D,Point3D]:
+def point_on_triangle(mesh: Mesh3D, polygon: Polygon3D)->"tuple[Point3D,Point3D]":
     p = polygon.vert_arr[0]
     for i in range (len(mesh.polygons)):
         detect = mesh.polygons[i].affilationPoint(p)
-        if detect == TRUE:
+        if detect == True:
             return mesh.polygons[i].project_point(p), mesh.polygons[i].n
     
 
-def GenerateContour(n: int,rad:float,delt:float)->list[Point3D]:
+def GenerateContour(n: int,rad:float,delt:float)->"list[Point3D]":
     step = 2*np.pi/n
     a = 0
     contour = []
@@ -166,7 +162,7 @@ def GenerateContour(n: int,rad:float,delt:float)->list[Point3D]:
         contour.append(Point3D(x, y, 0))
     return contour
 
-def divideTraj(s: list[Point3D], step: float):
+def divideTraj(s: "list[Point3D]", step: float):
     cont_traj = []
     for i in range(len(s)-1):
         cont_traj.append(s[i])
@@ -183,7 +179,7 @@ def divideTraj(s: list[Point3D], step: float):
 
     return cont_traj
 
-def FindPoints_for_line(contour: list[Point3D], y: float):
+def FindPoints_for_line(contour: "list[Point3D]", y: float):
     p1: Point3D
     p2: Point3D
     ps: list[Point3D]
@@ -209,7 +205,7 @@ def FindPoints_for_line(contour: list[Point3D], y: float):
         return []
 
 
-def FindCross_for_line(p: list[Point3D] ,y: float):
+def FindCross_for_line(p: "list[Point3D]" ,y: float):
 
     x = p[0].x+(p[1].x-p[0].x)*(y-p[0].y)/(p[1].y-p[0].y)
     p1 = Point3D(x,y,0)
@@ -220,13 +216,13 @@ def FindCross_for_line(p: list[Point3D] ,y: float):
             
 
 
-def GeneratePositionTrajectory_angle(contour: list[Point3D], step: float, alfa: float):
+def GeneratePositionTrajectory_angle(contour: "list[Point3D]", step: float, alfa: float):
     contour_rotate = rotate_list_points(contour, alfa)
     traj = GeneratePositionTrajectory(contour_rotate, step)
     traJ_rotate = rotate_list_points(traj, -alfa)
     return traJ_rotate
 
-def GeneratePositionTrajectory(contour: list[Point3D], step: float):
+def GeneratePositionTrajectory(contour: "list[Point3D]", step: float):
     # нахождение нижней точки
     y_min:float = 10000.
     i_min = 0.
@@ -405,7 +401,7 @@ def arrayViewer_GL(X,Y,Z):
             koords.append(Point3D(X[i][j],Y[i][j],Z[i][j]))
     return koords
 
-def arrayViewer_GL_2d(X,Y,Z,off_y:float = 0.)->list[list[Point3D]]:
+def arrayViewer_GL_2d(X,Y,Z,off_y:float = 0.)->"list[list[Point3D]]":
     koords:list[list[Point3D]] = []
     print("Z0:" + str(Z[0][0]))
     for i in range(len(X)):
@@ -415,7 +411,7 @@ def arrayViewer_GL_2d(X,Y,Z,off_y:float = 0.)->list[list[Point3D]]:
         koords.append(sub_koords)
     return koords
 
-def draw_frame(matr: list[Point3D], windowGL: GLWidget):
+def draw_frame(matr: "list[Point3D]", windowGL: GLWidget):
     points = createFrame(matr, 1)
     frame1 = Mesh3D( points[0:2] ,PrimitiveType.lines)
     frame2 = Mesh3D( points[2:4],PrimitiveType.lines)
@@ -425,7 +421,7 @@ def draw_frame(matr: list[Point3D], windowGL: GLWidget):
     windowGL.paint_objs.append(Paint_in_GL(1.0,0,1.0,4,PrimitiveType.lines,frame2))
     windowGL.paint_objs.append(Paint_in_GL(1.0,1,0,4,PrimitiveType.lines,frame3))
 
-def angles_of_extruder(list_of_matr: list[list[list[float]]]):
+def angles_of_extruder(list_of_matr: "list[list[list[float]]]"):
     list_of_angles = []
     for i in range (len(list_of_matr)):
         B = np.arcsin (list_of_matr[i][2][0])
@@ -434,7 +430,7 @@ def angles_of_extruder(list_of_matr: list[list[list[float]]]):
         list_of_angles.append([list_of_matr[i][0][3],list_of_matr[i][1][3], list_of_matr[i][2][3], A, B, C])
     return list_of_angles
 
-def push_string(value_of_matr: list[list[float]]):
+def push_string(value_of_matr: "list[list[float]]"):
     full_str = ""
     for i in range (len(value_of_matr)):  
         for j in range (len(value_of_matr[i])):
@@ -442,7 +438,7 @@ def push_string(value_of_matr: list[list[float]]):
         full_str += "\n"
     return full_str
 
-def Generate_one_layer_traj (contour: list[Point3D], step: float, alfa: float, surface: Mesh3D, div_step: float, zet: float, trans: float, r:float,g:float,b:float):
+def Generate_one_layer_traj (contour: "list[Point3D]", step: float, alfa: float, surface: Mesh3D, div_step: float, zet: float, trans: float, r:float,g:float,b:float):
     
     traj = GeneratePositionTrajectory_angle(contour, step, alfa)
     div_tr = divideTraj(traj, div_step)
@@ -459,7 +455,7 @@ def Generate_one_layer_traj (contour: list[Point3D], step: float, alfa: float, s
     matrs =  matrix_of_rotation(proj_traj,normal_arr, surface)
     return  proj_traj,normal_arr, matrs
 
-def Generate_multiLayer (contour: list[Point3D], step: float, alfa: float, surface: Mesh3D, div_step: float, zet: float, amount: int, trans: float):
+def Generate_multiLayer (contour: "list[Point3D]", step: float, alfa: float, surface: Mesh3D, div_step: float, zet: float, amount: int, trans: float):
     colors = [[0.,0.5,0.5],[1.,0.5,0.5],[0.,1.0,0.5],[0.,0.5,1.0],[0.,0.5,0.5],[0.,0.5,0.5],[0.,0.5,0.5],[0.,0.5,0.5]]
     proj_traj = []
     normal_arr = []
@@ -495,7 +491,7 @@ def main():
     mesh3=  window.gridToTriangleMesh(koords3)
     mesh3d_surface = Mesh3D(mesh3,PrimitiveType.triangles)
     meshorig=  window.gridToTriangleMesh(koordsorig)
-    extruder_m = window.extract_coords_from_stl("E:\python39\pathplanner\extruder.stl")
+    extruder_m = window.extract_coords_from_stl("extruder.stl")
 
     cont = GenerateContour(20,2,0.2) 
 

@@ -1,7 +1,6 @@
-from asyncio.windows_events import NULL
+
 import math
 import enum
-from pickle import FALSE, TRUE
 
 
 class PrimitiveType(enum.Enum):
@@ -60,7 +59,7 @@ class Point3D(object):
             return Point3D(self.y*other.z-self.z*other.y, self.z*other.x-self.x*other.z,self.x*other.y-self.y*other.x,self.extrude)
         else:
             return Point3D(self.x*other,self.y*other,self.z*other,self.extrude)
-    def matrMul(self,matr:list[list[float]]):
+    def matrMul(self,matr:"list[list[float]]"):
 
         x = matr[0][0]*self.x + matr[0][1]*self.y + matr[0][2]*self.z+matr[0][3]
         y = matr[1][0]*self.x + matr[1][1]*self.y + matr[1][2]*self.z+matr[1][3]
@@ -69,11 +68,11 @@ class Point3D(object):
     
 
 class Polygon3D(object):
-    vert_arr:list[Point3D] 
+    vert_arr:"list[Point3D] "
     n:Point3D
-    def __init__(self,_vert_arr:list[Point3D]=None):
+    def __init__(self,_vert_arr:"list[Point3D]"=None):
         if(_vert_arr!=None):
-            self.n = NULL
+            self.n = None
             self.vert_arr = _vert_arr
             if (len(_vert_arr) > 2):
                 self.n = self.compNorm(_vert_arr[0],_vert_arr[1],_vert_arr[2])
@@ -91,14 +90,14 @@ class Polygon3D(object):
         Norm.normalyse()
         return Point3D(Norm.x,Norm.y,Norm.z)
     
-    def matrMul(self,matr:list[list[float]]):
+    def matrMul(self,matr:"list[list[float]]"):
         for i in range(len(self.vert_arr)):
             self.vert_arr[i] = self.vert_arr[i].matrMul(matr)
         return self
     
     def affilationPoint(self, p: Point3D):
         if (len(self.vert_arr)<3):
-            return FALSE
+            return False
         a = self.vert_arr [0].Clone()
         b = self.vert_arr [1].Clone()
         c = self.vert_arr [2].Clone()
@@ -111,8 +110,8 @@ class Polygon3D(object):
         if(m >=0 and m <=1):
             l = (p.x - m*c.x)/b.x
             if (l >=0 and m+l <=1):
-                return TRUE
-        return FALSE
+                return True
+        return False
 
     def project_point(self,p: Point3D):
         p1 = self.vert_arr [0]
@@ -134,7 +133,7 @@ class Polygon3D(object):
         copy.vert_arr = vert
         copy.n = norm
         return copy
-    def matrMul(self,matr:list[list[float]]):
+    def matrMul(self,matr:"list[list[float]]"):
         copy = self.Clone()
         for i in range(len(self.vert_arr)):
              copy.vert_arr[i] = self.vert_arr[i].matrMul(matr)
@@ -142,9 +141,9 @@ class Polygon3D(object):
     
 
 class Mesh3D(object):
-    polygons:list[Polygon3D] = []
+    polygons:"list[Polygon3D]" = []
 
-    def __init__(self,_points:list[Point3D]=None, prim_type: PrimitiveType=None):
+    def __init__(self,_points:"list[Point3D]"=None, prim_type: PrimitiveType=None):
         self.polygons = []
         if _points!=None:
             if (prim_type == PrimitiveType.points ):
@@ -184,7 +183,7 @@ class Mesh3D(object):
         copy = Mesh3D()
         copy.polygons = polygons
         return copy
-    def setTransform(self,matr:list[list[float]]):
+    def setTransform(self,matr:"list[list[float]]"):
         copy = self.Clone()
         for i in range(len(copy.polygons)):
             copy.polygons[i] = self.polygons[i].matrMul(matr)
