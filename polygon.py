@@ -1,6 +1,7 @@
 
 import math
 import enum
+from random import triangular
 
 
 class PrimitiveType(enum.Enum):
@@ -145,9 +146,11 @@ class Polygon3D(object):
 
 class Mesh3D(object):
     polygons:"list[Polygon3D]" = []
+    primTp:PrimitiveType
 
     def __init__(self,_points:"list[Point3D]"=None, prim_type: PrimitiveType=None):
         self.polygons = []
+        self.primTp = prim_type
         if _points!=None:
             if (prim_type == PrimitiveType.points ):
                 
@@ -191,6 +194,32 @@ class Mesh3D(object):
         for i in range(len(copy.polygons)):
             copy.polygons[i] = self.polygons[i].matrMul(matr)
         return copy
+
+    def save(self,name:str):
+        if len(self.polygons)<=0 or self.primTp != PrimitiveType.triangles:
+            
+            print("len: "+str(len(self.polygons))+ " must be > 0; "+str(self.primTp)+" must be PrimitiveType.triangles")
+            print(name+ " not save stl")
+            return
+        text = "solid\n"
+        n_i = 0
+        print(len(self.polygons))       
+        for i in range(int (len(self.polygons)/3)):
+            #print(i)
+            text+="facet normal "+str(self.polygons[i].n.x)+" "+str(self.polygons[i].n.y)+" "+str(self.polygons[i].n.z)+"\n "
+            text+="outer loop\n"
+            text+="vertex "+str(self.polygons[i].vert_arr[0].x)+" "+str(self.polygons[i].vert_arr[0].y)+" "+str(self.polygons[i].vert_arr[0].z)+"\n "
+            text+="vertex "+str(self.polygons[i].vert_arr[1].x)+" "+str(self.polygons[i].vert_arr[1].y)+" "+str(self.polygons[i].vert_arr[1].z)+"\n "
+            text+="vertex "+str(self.polygons[i].vert_arr[2].x)+" "+str(self.polygons[i].vert_arr[2].y)+" "+str(self.polygons[i].vert_arr[2].z)+"\n "
+            text+="endloop\n"
+            text+="endfacet \n"
+            
+            n_i+=1
+        text += "endsolid\n"
+        f = open(name+'.stl', 'w')
+        f.write(text)
+        print(name+" saved stl")
+        f.close()
 
         
 

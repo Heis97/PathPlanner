@@ -1,5 +1,6 @@
 import numpy as np
 import PathPlanner
+import gc
 from polygon import Mesh3D, Point3D, Polygon3D, PrimitiveType
 import Viewer3D_GL
 import sys
@@ -10,7 +11,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import *
 from PyQt5.QtGui import QBrush, QColor, QPainter, QPen, QPolygon
 from PyQt5.QtCore import (pyqtProperty, pyqtSignal, pyqtSlot, QPoint, QSize,
-        Qt, QTime, QTimer)
+        Qt, QTime, QTimer,QThread)
+
 
 class PathPlannerWidg(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -20,9 +22,9 @@ class PathPlannerWidg(QtWidgets.QWidget):
         self.cont:"list[Point3D]" = None
         self.surf:Mesh3D = None      
         self.build()
-        PathPlanner.initWind(self.ppw)
+        #PathPlanner.initWind(self.ppw)
     def build(self):
-
+        
         self.ppw = Viewer3D_GL.GLWidget(self)
         self.ppw.setGeometry(QtCore.QRect(200, 0, 1000, 1000))
 
@@ -60,20 +62,27 @@ class PathPlannerWidg(QtWidgets.QWidget):
 
         self.lin_mod = QtWidgets.QLineEdit(self)
         self.lin_mod.setGeometry(QtCore.QRect(0, 150, 200, 30))
+        self.lin_mod.setText("test_0.1_0.9_0.1.stl")
 
         self.lin_traj = QtWidgets.QLineEdit(self)
         self.lin_traj.setGeometry(QtCore.QRect(0, 180, 200, 30))
+        self.lin_traj.setText("traj_test_1")
         #self.but1.clicked.connect()
 
     def loadSurf(self):
         m = self.ppw.extract_coords_from_stl(self.lin_mod.text())
         mesh = Mesh3D( m,PrimitiveType.triangles)
         self.surf = mesh
+        self.ppw.paint_objs = []
         self.ppw.paint_objs.append(Viewer3D_GL.Paint_in_GL(0.5,0.5,0,1,PrimitiveType.triangles,mesh))
+        gc.collect()
+
 
     def compPlan(self):
         if self.cont!=None and self.surf!=None:
-            proj_traj,normal_arr, matrs = PathPlanner.Generate_multiLayer(self.cont, 1.6, np.pi/2, self.surf, 1.3, 0.1, 2, 5)
+            proj_traj,normal_arr, matrs = PathPlanner.Generate_multiLayer(self.cont, 1.6, np.pi/2, self.surf, 1.3, 0.3, 2, 5)
+            mesh3d_traj = Mesh3D(proj_traj,PrimitiveType.lines)
+            self.ppw.paint_objs.append(Viewer3D_GL.Paint_in_GL(0.5,1,0.5,5,PrimitiveType.lines,mesh3d_traj))
             PathPlanner.saveTrajTxt(proj_traj,matrs,self.lin_traj.text())
     
     def gl_rot(self):

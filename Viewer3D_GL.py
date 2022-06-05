@@ -15,6 +15,7 @@ from matplotlib.backend_bases import MouseEvent
 from polygon import Mesh3D, Point3D,PrimitiveType
 
 class Paint_in_GL(object):
+    glList = None
     matrs:"list[list[list[float]]]" = None
     red = 0.
     green = 0.
@@ -41,7 +42,7 @@ class Paint_in_GL(object):
 
     #сохранить stl
     def save(self,name:str):
-        if(len(self.points)==0 or len(self.norm)==0 or PrimitiveType== PrimitiveType.triangles):
+        if(len(self.points)==0 or len(self.norm)==0 or self.obj_type != PrimitiveType.triangles):
             return
         text = "solid\n"
         n_i = 0
@@ -54,8 +55,7 @@ class Paint_in_GL(object):
             text+="vertex "+str(self.points[i*3+1].x)+" "+str(self.points[i*3+1].y)+" "+str(self.points[i*3+1].z)+"\n "
             text+="vertex "+str(self.points[i*3+2].x)+" "+str(self.points[i*3+2].y)+" "+str(self.points[i*3+2].z)+"\n "
             text+="endloop\n"
-            text+="endfacet \n"
-            
+            text+="endfacet \n"            
             n_i+=1
         text += "endsolid\n"
         f = open(name+'.stl', 'w')
@@ -97,7 +97,7 @@ class GLWidget(QOpenGLWidget):
         self.zRot = 0#1200
         self.off_x=0.0
         self.off_y=0.0
-        self.zoom=1000
+        self.zoom=100
     def initializeGL(self):
         self.setClearColor(self.trolltechPurple)
         gl.glShadeModel(gl.GL_FLAT)
@@ -108,97 +108,108 @@ class GLWidget(QOpenGLWidget):
         #gl.glEnable(gl.GL_CULL_FACE) 
         gl.glEnable(gl.GL_LIGHTING)
         gl.glEnable(gl.GL_LIGHT0)
-        lightZeroPosition = [0.,0.,0.,1000.]
-        lightZeroColor = [10.0,10.0,10.0,1.0] 
+        lightPower = 1000.
+        lightZeroPosition = [0.,0.,100.,1.]
+        lightZeroColor = [lightPower,lightPower,lightPower,1.0] 
         gl.glLightfv(gl.GL_LIGHT0, gl.GL_POSITION, lightZeroPosition)
         gl.glLightfv(gl.GL_LIGHT0, gl.GL_DIFFUSE, lightZeroColor)
         gl.glLightf(gl.GL_LIGHT0, gl.GL_CONSTANT_ATTENUATION, 0.1)
         gl.glLightf(gl.GL_LIGHT0, gl.GL_LINEAR_ATTENUATION, 0.05)
         
-        gl.glDisable(gl.GL_LIGHTING)
-        gl.glDisable(gl.GL_LIGHT0)
+        #gl.glDisable(gl.GL_LIGHTING)
+        #gl.glDisable(gl.GL_LIGHT0)
         self.resizeGL(self.w,self.h)
+        self.getOpenglInfo()
        
-    def GL_paint(self,  paint_gls: "list[Paint_in_GL]"):
+    def initPaint_in_GL(self,  paint_gls: Paint_in_GL):
 
-        for i in range(len(paint_gls)):
-            mesh_obj = paint_gls[i].mesh_obj
-            if(paint_gls[i].matrs!=None):
-                ind_m = self.render_count % len(paint_gls[i].matrs)
-                mesh_obj = paint_gls[i].setTrasform(paint_gls[i].matrs[ind_m])
-            genList = gl.glGenLists(1)
-            gl.glNewList(genList, gl.GL_COMPILE)    
-            v = paint_gls[i]
-            gl.glLineWidth(v.size)
-            gl.glPointSize(10*v.size)
-            color = QColor.fromCmykF(v.red, v.green, v.blue, 0.0)
-            gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_DIFFUSE, (v.red, v.green, v.blue))
-            self.setColor(color)
-            if v.obj_type == PrimitiveType.points:
-                gl.glBegin(gl.GL_POINTS)
-                len_points = len(v.mesh_obj.polygons)
-                for j in range(len_points):  
-                    p2 = v.mesh_obj.polygons[j].vert_arr[0] 
-                    gl.glVertex3d(p1.x,p1.y,p1.z)
-                    gl.glNormal3d(0.5, 0.5, 0.5)
-                gl.glEnd()
+        
+        mesh_obj = paint_gls.mesh_obj
+        if(paint_gls.matrs!=None):
+            ind_m = self.render_count % len(paint_gls.matrs)
+            mesh_obj = paint_gls.setTrasform(paint_gls.matrs[ind_m])
+        genList = gl.glGenLists(1)
+        gl.glNewList(genList, gl.GL_COMPILE)  
+        v = paint_gls
+        gl.glLineWidth(v.size)
+        gl.glPointSize(10*v.size)
+        color = QColor.fromCmykF(v.red, v.green, v.blue, 0.0)
+        gl.glMaterialfv(gl.GL_FRONT_AND_BACK, gl.GL_DIFFUSE, (v.red, v.green, v.blue))
+        self.setColor(color)
+        if v.obj_type == PrimitiveType.points:
+            gl.glBegin(gl.GL_POINTS)
+            len_points = len(v.mesh_obj.polygons)
+            for j in range(len_points):  
+                p2 = v.mesh_obj.polygons[j].vert_arr[0] 
+                gl.glVertex3d(p1.x,p1.y,p1.z)
+                gl.glNormal3d(0.5, 0.5, 0.5)
+            gl.glEnd()
 
-            elif v.obj_type == PrimitiveType.lines:
-                gl.glEnable(gl.GL_LINE_SMOOTH)
-                gl.glLineStipple(2,58360)
-                gl.glBegin(gl.GL_LINES)
-                 
-                len_points = len(v.mesh_obj.polygons)
-                for j in range(len_points):
-                    
-                    p1 = v.mesh_obj.polygons[j].vert_arr[0]  
-                    p2 = v.mesh_obj.polygons[j].vert_arr[1] 
-                    color1 = QColor.fromCmykF(p2.r, p2.g, p2.b, 0.0)
+        elif v.obj_type == PrimitiveType.lines:
+            gl.glEnable(gl.GL_LINE_SMOOTH)
+            gl.glLineStipple(2,58360)
+            gl.glBegin(gl.GL_LINES)
+                
+            len_points = len(v.mesh_obj.polygons)
+            for j in range(len_points):
+                
+                p1 = v.mesh_obj.polygons[j].vert_arr[0]  
+                p2 = v.mesh_obj.polygons[j].vert_arr[1] 
+                color1 = QColor.fromCmykF(p2.r, p2.g, p2.b, 0.0)
+                self.setColor(color1)
+                if p2.extrude == False:
+                    color1 = QColor.fromCmykF(1., 0., 0., 0.0)
                     self.setColor(color1)
-                    if p2.extrude == False:
-                        color1 = QColor.fromCmykF(1., 0., 0., 0.0)
-                        self.setColor(color1)
-                        #gl.glEnable(gl.GL_LINE_STIPPLE)                           
-                        
-                        #gl.glDisable(gl.GL_LINE_STIPPLE) 
-                    gl.glVertex3d(p1.x,p1.y,p1.z)
-                    gl.glVertex3d(p2.x,p2.y,p2.z)
-                    gl.glNormal3d(0.5, 0.5, 0.5)
-                gl.glEnd()
+                    #gl.glEnable(gl.GL_LINE_STIPPLE)                           
+                    
+                    #gl.glDisable(gl.GL_LINE_STIPPLE) 
+                gl.glVertex3d(p1.x,p1.y,p1.z)
+                gl.glVertex3d(p2.x,p2.y,p2.z)
+                gl.glNormal3d(0.5, 0.5, 0.5)
+            gl.glEnd()
+        
+        elif v.obj_type == PrimitiveType.triangles:
+            gl.glEnable(gl.GL_LIGHTING)
+            gl.glEnable(gl.GL_LIGHT0)
+            gl.glBegin(gl.GL_TRIANGLES)
             
-            elif v.obj_type == PrimitiveType.triangles:
-                gl.glEnable(gl.GL_LIGHTING)
-                gl.glEnable(gl.GL_LIGHT0)
-                gl.glBegin(gl.GL_TRIANGLES)
-                
-                len_points = len(mesh_obj.polygons)
-                for j in range(len_points):   
-                    p1 = mesh_obj.polygons[j].vert_arr[0]  
-                    p2 = mesh_obj.polygons[j].vert_arr[1] 
-                    p3 = mesh_obj.polygons[j].vert_arr[2]   
-                    n = mesh_obj.polygons[j].n
-                    if(n !=None):        
-                        gl.glNormal3d(n.x, n.y, n.z)
-                    gl.glVertex3d(p1.x,p1.y,p1.z)
-                    gl.glVertex3d(p2.x,p2.y,p2.z)
-                    gl.glVertex3d(p3.x,p3.y,p3.z)
-                
-                gl.glEnd()
-                gl.glDisable(gl.GL_LIGHTING)
-                gl.glDisable(gl.GL_LIGHT0)  
- 
-            gl.glEndList()
-            gl.glCallList(genList)
+            len_points = len(mesh_obj.polygons)
+            for j in range(len_points):   
+                p1 = mesh_obj.polygons[j].vert_arr[0]  
+                p2 = mesh_obj.polygons[j].vert_arr[1] 
+                p3 = mesh_obj.polygons[j].vert_arr[2]   
+                n = mesh_obj.polygons[j].n
+                if(n !=None):        
+                    gl.glNormal3d(n.x, n.y, n.z)
+                gl.glVertex3d(p1.x,p1.y,p1.z)
+                gl.glVertex3d(p2.x,p2.y,p2.z)
+                gl.glVertex3d(p3.x,p3.y,p3.z)
+            
+            gl.glEnd()
+            gl.glDisable(gl.GL_LIGHTING)
+            gl.glDisable(gl.GL_LIGHT0)  
+
+        gl.glEndList()
+
+        return genList
+            
+    def GL_paint(self,  paint_gls: "list[Paint_in_GL]"):
+        for i in range(len(paint_gls)):
+            if paint_gls[i].glList==None:
+                paint_gls[i].glList = self.initPaint_in_GL(paint_gls[i])
+            gl.glCallList(paint_gls[i].glList)
+
 
     def paintGL(self):
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
         gl.glLoadIdentity()
-        gl.glTranslated(self.off_x, self.off_y,0.0)
-        gl.glScalef(self.zoom,self.zoom,self.zoom)
+        
+        
+        gl.glTranslated(self.off_x, self.off_y,-10.)
         gl.glRotated(self.xRot, 1.0, 0.0, 0.0)
         gl.glRotated(self.yRot, 0.0, 1.0, 0.0)
         gl.glRotated(self.zRot, 0.0, 0.0, 1.0)
-
+        gl.glScalef(self.zoom,self.zoom,self.zoom)
         self.render_count+=1
 
         self.GL_paint(self.paint_objs)
@@ -207,6 +218,7 @@ class GLWidget(QOpenGLWidget):
     def extract_coords_from_stl(self,stl_file):
         result = []
         coords = []
+
         for l in open(stl_file):
             l = l.split()
             if l[0] == 'facet':
@@ -217,19 +229,10 @@ class GLWidget(QOpenGLWidget):
                 coords.append(Point3D(vert[0],vert[1],vert[2]))
         return coords
     def getOpenglInfo(self):
-        info = """
-            Vendor: {0}
-            Renderer: {1}
-            OpenGL Version: {2}
-            Shader Version: {3}
-        """.format(
-            gl.glGetString(gl.GL_VENDOR),
-            gl.glGetString(gl.GL_RENDERER),
-            gl.glGetString(gl.GL_VERSION),
-            gl.glGetString(gl.GL_SHADING_LANGUAGE_VERSION)
-        )
+        
+        #print() 
+        print(gl.glGetString(gl.GL_RENDERER))
 
-        return info
 
     def minimumSizeHint(self):
         return QSize(50, 50)
@@ -291,6 +294,7 @@ class GLWidget(QOpenGLWidget):
                 self.zoom*=0.7
         elif wheelcounter.y() > 0:
             self.zoom/=0.7
+        print(self.zoom)
         self.update()
     
     def mousePressEvent(self, event:QMouseEvent):
@@ -318,7 +322,7 @@ class GLWidget(QOpenGLWidget):
         #print(str(p_widg.x())+" "+str(p_widg.y()))
         #print(str((p_widg.x()-self.w/2)*scale)+" "+str((p_widg.y()-self.h/2)*scale))
         x = (p_widg.x()-self.w/2)*scale
-        y = (p_widg.y()-self.h/2)*scale
+        y = -(p_widg.y()-self.h/2)*scale
         return QPointF(x,y)
 
     def normalizeAngle(self, angle):

@@ -133,6 +133,9 @@ def matrix_of_rotation(traj:"list[Point3D]",normals:"list[Point3D]", mesh: Mesh3
 def projection(mesh: Mesh3D, traj: Mesh3D, zet: float, r:float,g:float,b:float)->"tuple[list[Point3D],list[Point3D]]":
     traj_proj_arr_:list[Point3D] = []
     traj_proj_arr_n:list[Point3D] = []
+    deb_i = int(len(traj.polygons)/10)
+    deb_i_all = deb_i
+    deb_proc = 0
     for i in range (len(traj.polygons)):
         p,n = point_on_triangle(mesh, traj.polygons[i])
         p.z+= zet
@@ -141,7 +144,60 @@ def projection(mesh: Mesh3D, traj: Mesh3D, zet: float, r:float,g:float,b:float)-
         p.b = b
         traj_proj_arr_.append(p)
         traj_proj_arr_n.append(n)
+        if i % deb_i_all == 0:
+            deb_i_all+=deb_i
+            deb_proc+=10
+            print("proj "+str(deb_proc)+" /100 done")
     return traj_proj_arr_,traj_proj_arr_n
+
+def findGab(cont:"list[Point3D]"):
+    minX = 100000
+    minY = 100000
+    maxX = -100000
+    maxY = -100000
+    for i in range(len(cont)):
+        if(cont[i].x>maxX):
+            maxX = cont[i].x
+        if(cont[i].y>maxY):
+            maxY = cont[i].y
+
+        if(cont[i].x<minX):
+            minX = cont[i].x
+        if(cont[i].y<minY):
+            minY = cont[i].y
+    print(minX)
+    print(maxX)
+    print(minY)
+    print(maxY)
+    return minX, maxX,minY,maxY
+
+def affilPoint(p:Point3D,minX, maxX,minY,maxY)->bool:
+    if p.x < minX or p.x > maxX:
+        return False
+    if p.y < minY or p.y > maxY:
+        return False
+    return True
+
+def affilPolyg(p:Polygon3D,minX, maxX,minY,maxY)->bool:
+    for i in range(len(p.vert_arr)):
+        if affilPoint(p.vert_arr[i],minX, maxX,minY,maxY):
+            return True
+    return False
+
+
+def cutMesh(mesh: Mesh3D,cont:"list[Point3D]")->Mesh3D:
+    minX, maxX,minY,maxY = findGab(cont)
+    polygons:"list[Polygon3D]" = []
+    for i in range(len(mesh.polygons)):
+        if affilPolyg(mesh.polygons[i],minX, maxX,minY,maxY):
+            polygons.append(mesh.polygons[i].Clone())
+    mesh_c = Mesh3D()
+    mesh_c.primTp = PrimitiveType.triangles
+    mesh_c.polygons = polygons.copy()
+    return mesh_c 
+        
+
+
 
 def point_on_triangle(mesh: Mesh3D, polygon: Polygon3D)->"tuple[Point3D,Point3D]":
     p = polygon.vert_arr[0]
@@ -454,14 +510,16 @@ def ToStringList(cont:"list[Point3D]"):
         return text
 
 def Generate_one_layer_traj (contour: "list[Point3D]", step: float, alfa: float, surface: Mesh3D, div_step: float, zet: float, trans: float, r:float,g:float,b:float):
-    
+    print("start gen Layer")
     traj = GeneratePositionTrajectory_angle(contour, step, alfa)
+    print("GeneratePositionTrajectory Done "+ str(len(traj))+" len")
     div_tr = divideTraj(traj, div_step)
     fil_tr = divideTraj(div_tr, div_step/2)
-
+    print("divideTraj Done")
     mesh3d_1 = Mesh3D(fil_tr,PrimitiveType.lines)
-    
+    print("Mesh3D Done")
     proj_traj,normal_arr = projection(surface,  mesh3d_1, zet,r,g,b)
+    print("projection Done")
     proj_traj[0].z += trans
     proj_traj[-1].z += trans
     proj_traj[0].extrude = False
@@ -469,6 +527,7 @@ def Generate_one_layer_traj (contour: "list[Point3D]", step: float, alfa: float,
     proj_traj[-1].extrude = False
 
     matrs =  matrix_of_rotation(proj_traj,normal_arr, surface)
+    print("matrix_of_rotation Done")
     return  proj_traj,normal_arr, matrs
 
 def filResTraj(filt:float,proj_traj: "list[Point3D]",normal_arr,matrs):
@@ -494,12 +553,14 @@ def Generate_multiLayer (contour: "list[Point3D]", step: float, alfa: float, sur
     proj_traj:"list[Point3D]" = []
     normal_arr = []
     matrs = []
-    
+    cut_mesh = cutMesh(surface,contour)
+    cut_mesh.save("cutted")
+    print("cut_mesh_len:"+str(len(cut_mesh.polygons)) )
     for i in range (amount):
         alfa2 = alfa
         if i % 2 == 0:
             alfa2 += np.pi/2
-        p, n, m = Generate_one_layer_traj (contour, step, alfa2, surface, div_step, zet*(i+1), trans,colors[i][0],colors[i][1],colors[i][2])
+        p, n, m = Generate_one_layer_traj (contour, step, alfa2, cut_mesh , div_step, zet*(i+1), trans,colors[i][0],colors[i][1],colors[i][2])
         proj_traj += p
         normal_arr += n
         matrs += m
