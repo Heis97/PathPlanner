@@ -1,6 +1,6 @@
 import numpy as np
 import random
-from opengl2_viewer import Paint_in_GL, Point3D, PrimitiveType,GLWidget,QtWidgets
+from Viewer3D_GL import Paint_in_GL, Point3D, PrimitiveType,GLWidget,QtWidgets
 import sys
 
 from polygon import Mesh3D, Polygon3D
@@ -447,6 +447,12 @@ def push_string(value_of_matr: "list[list[float]]"):
         full_str += "\n"
     return full_str
 
+def ToStringList(cont:"list[Point3D]"):
+        text = "___________\n"
+        for i in range(len(cont)):
+            text+=cont[i].ToString()+" \n"
+        return text
+
 def Generate_one_layer_traj (contour: "list[Point3D]", step: float, alfa: float, surface: Mesh3D, div_step: float, zet: float, trans: float, r:float,g:float,b:float):
     
     traj = GeneratePositionTrajectory_angle(contour, step, alfa)
@@ -526,11 +532,8 @@ def saveTrajTxt(traj:"list[Point3D]",list_of_matr: "list[list[list[float]]]",nam
     f1.write('q\n')
     f1.close()
 
-def main():
+def initWind(window:GLWidget):
     # позволяет оконному приложени работать (почитать про это)
-    app =QtWidgets.QApplication(sys.argv)
-    window = GLWidget() # создание графического окна
-
     #koords = arrayViewer_GL(x,y,z)   
     #window.paint_objs.append(Paint_in_GL(0,1,0,2,1,koords,PrimitiveType.lines))
 
@@ -546,33 +549,28 @@ def main():
     meshorig=  window.gridToTriangleMesh(koordsorig)
    
 
-    cont = GenerateContour(20,15,3) 
-
-    
-
-    proj_traj,normal_arr, matrs = Generate_multiLayer(cont, 1.6, np.pi/2, mesh3d_surface, 1.3, 0.1, 2, 5)
+    cont = GenerateContour(20,5,3) 
+    proj_traj,normal_arr, matrs = Generate_multiLayer(cont, 1., np.pi/2, mesh3d_surface, 1.3, 0.1, 2, 5)
     saveTrajTxt(proj_traj,matrs,"traj_test2")
 
 
-    extruder_m = window.extract_coords_from_stl("extruder.stl")
+  
     mesh3d_traj = Mesh3D(proj_traj,PrimitiveType.lines)
     window.paint_objs.append(Paint_in_GL(0.5,1,0.5,5,PrimitiveType.lines,mesh3d_traj))
 
+    extruder_m = window.extract_coords_from_stl("extruder.stl")
     extruder_mesh = Mesh3D( extruder_m,PrimitiveType.triangles)
     #extruder_mesh.scaleMesh(0.01)
     extruder_mesh.invertMormals()
     extruder_mesh.setTransform(matrs[0])
     window.paint_objs.append(Paint_in_GL(0.5,0.5,0,1,PrimitiveType.triangles,mesh3d_surface))
     
-    glObjExtr = Paint_in_GL(0.2,0.2,0.2,1,PrimitiveType.triangles,extruder_mesh)
-    glObjExtr.matrs = matrs
-    window.paint_objs.append(glObjExtr)
+    #glObjExtr = Paint_in_GL(0.2,0.2,0.2,1,PrimitiveType.triangles,extruder_mesh)
+    #glObjExtr.matrs = matrs
+    #window.paint_objs.append(glObjExtr)
     #window.paint_objs.append(Paint_in_GL(0.5,0.,0.5,1,PrimitiveType.triangles,mesh3d_orig))
-    
-    window.show()
-    sys.exit(app.exec_())
+
     
 
-if __name__ == "__main__":
-    main()
+
 

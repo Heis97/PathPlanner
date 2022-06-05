@@ -33,8 +33,11 @@ class Point3D(object):
             self.y /=norm
             self.z /=norm
         return Point3D(self.x,self.y,self.z,self.extrude)
-    def ToString(self):
-        return str(self.x)+" "+str(self.y)+" "+str(self.z)+" "+self.extrude
+
+    def ToString(self)->str:
+        return str(self.x)+" "+str(self.y)+" "+str(self.z)+" "
+
+    
 
     def __add__(self, other):
         x = self.x + other.x

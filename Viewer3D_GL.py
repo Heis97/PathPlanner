@@ -1,19 +1,16 @@
 #from socket import *
 
-import socket
 import sys
-import time
-import serial
-import math
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import (QWidget, QPushButton,QSlider, QLineEdit, QOpenGLWidget,QTextEdit,
     QInputDialog, QApplication,QGridLayout)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import *
 from PyQt5.QtGui import QBrush, QColor, QPainter, QPen, QPolygon
-from PyQt5.QtCore import (pyqtProperty, pyqtSignal, pyqtSlot, QPoint, QSize,
+from PyQt5.QtCore import (pyqtProperty, pyqtSignal, pyqtSlot, QPoint,QPointF, QSize,
         Qt, QTime, QTimer)
 import OpenGL.GL as gl
+from matplotlib.backend_bases import MouseEvent
 
 from polygon import Mesh3D, Point3D,PrimitiveType
 
@@ -67,7 +64,10 @@ class Paint_in_GL(object):
         
 class GLWidget(QOpenGLWidget):
     paint_objs:"list[Paint_in_GL]"  = []
-    
+    cont_select:bool = False
+    rot:bool = True
+    trans:bool = True
+    cont:"list[Point3D]" = None
     render_count = 0
     def __init__(self, parent=None):
         super(GLWidget, self).__init__(parent)
@@ -82,15 +82,22 @@ class GLWidget(QOpenGLWidget):
         self.off_x=0.0
         self.off_y=0.0
         self.lastPos = QPoint()
-        self.zoom=0.1
+        self.zoom=1
         self.trolltechGreen = QColor.fromCmykF(1.0, 0.5, 0.5, 0.0)
         self.trolltechGreen1 = QColor.fromCmykF(1.0, 0.7, 0.7, 0.0)
         self.trolltechRed = QColor.fromCmykF(0.0, 1.0, 1.0, 0.0)
         self.trolltechPurple = QColor.fromCmykF(0.0, 0.0, 0.0, 0.0)
         self.l2=[]
-        self.resize(1400, 800) 
+        self.w = 1000
+        self.h = 1000
 
-
+    def setXY(self):
+        self.xRot = 0#2200
+        self.yRot = 0
+        self.zRot = 0#1200
+        self.off_x=0.0
+        self.off_y=0.0
+        self.zoom=1000
     def initializeGL(self):
         self.setClearColor(self.trolltechPurple)
         gl.glShadeModel(gl.GL_FLAT)
@@ -110,10 +117,8 @@ class GLWidget(QOpenGLWidget):
         
         gl.glDisable(gl.GL_LIGHTING)
         gl.glDisable(gl.GL_LIGHT0)
-        self.resizeGL(1200,800)
-  
-    
-
+        self.resizeGL(self.w,self.h)
+       
     def GL_paint(self,  paint_gls: "list[Paint_in_GL]"):
 
         for i in range(len(paint_gls)):
@@ -188,7 +193,7 @@ class GLWidget(QOpenGLWidget):
     def paintGL(self):
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
         gl.glLoadIdentity()
-        gl.glTranslated(self.off_x, self.off_y,-250.0)
+        gl.glTranslated(self.off_x, self.off_y,0.0)
         gl.glScalef(self.zoom,self.zoom,self.zoom)
         gl.glRotated(self.xRot, 1.0, 0.0, 0.0)
         gl.glRotated(self.yRot, 0.0, 1.0, 0.0)
@@ -246,46 +251,6 @@ class GLWidget(QOpenGLWidget):
         #print("norm: "+str(Norm.x)+" "+str(Norm.y)+" "+str(Norm.z)+" ")
         return Norm
 
-    '''def paint_1d(self,points1d:list[Point3D],r:float,g:float,b:float):
-        norms:list[Point3D] = []
-
-        gl_obj = Paint_in_GL(r,g,b,1,PrimitiveType.lines,None,points1d)
-        gl_obj.norm = norms
-        return gl_obj
-
-
-
-    def paint_2d(self,points2d:list[list[Point3D]],r:float,g:float,b:float):
-        points1d:list[Point3D] = []
-        norms:list[Point3D] = []
-        
-        for i in range(len(points2d)-1):
-            for j in range(len(points2d[0])-1):
-                #print("p1: "+str(points2d[i][j].x)+" "+str(points2d[i][j].y)+" "+str(points2d[i][j].z)+" ")
-                p1 = points2d[i][j+1]
-                p2 = points2d[i][j]
-                p3 = points2d[i+1][j]
-
-                n1 = self.compNorm(p1,p2,p3)
-                norms.append(n1)
-                points1d.append(p1)
-                points1d.append(p2)
-                points1d.append(p3)
-         
-                p1 = points2d[i+1][j]
-                p2 = points2d[i+1][j+1]
-                p3 = points2d[i][j+1]
-                n2 = self.compNorm(p1,p2,p3)
-                norms.append(n2)
-                points1d.append(p1)
-                points1d.append(p2)
-                points1d.append(p3)
-
-        gl_obj = Paint_in_GL(r,g,b,1,PrimitiveType.triangles, None,points1d)
-        gl_obj.norm = norms
-        return gl_obj'''
-
-
     def gridToTriangleMesh(self,points2d:"list[list[Point3D]]"):
         points1d:list[Point3D] = []
         
@@ -309,10 +274,10 @@ class GLWidget(QOpenGLWidget):
 
         gl.glViewport((width - side) // 2, (height - side) // 2, side,
                            side)
-        scale = 1000.
+        scale = 1.
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
-        gl.glOrtho(-width/ scale , width/ scale , -height/ scale , height/ scale , -100., 5000.0)
+        gl.glOrtho(-width/ scale , width/ scale , -height/ scale , height/ scale , -20000., 50000.0)
         
         gl.glMatrixMode(gl.GL_MODELVIEW)
 
@@ -325,25 +290,36 @@ class GLWidget(QOpenGLWidget):
             else:
                 self.zoom*=0.7
         elif wheelcounter.y() > 0:
-            self.zoom*=1.3
+            self.zoom/=0.7
         self.update()
-    def mousePressEvent(self, event):
+    
+    def mousePressEvent(self, event:QMouseEvent):
         self.lastPos = event.pos()
+        if self.cont_select:
+            pf = self.toSurfCoord(self.lastPos)
+            self.cont.append(Point3D(pf.x(),pf.y(),0))
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event:QMouseEvent):
         dx = event.x() - self.lastPos.x()
         dy = event.y() - self.lastPos.y()
 
-        if event.buttons() & Qt.LeftButton:
+        if (event.buttons() & Qt.LeftButton) and self.rot:
             self.xRot += dy
             self.zRot += dx
-        elif event.buttons() & Qt.RightButton:
-            self.off_x+=dx/360
-            self.off_y+=dy/360
+        if (event.buttons() & Qt.RightButton) and self.trans:
+            self.off_x+=2*dx
+            self.off_y-=2*dy
 
         self.lastPos = event.pos()
         self.update()
 
+    def toSurfCoord(self,p_widg:QPoint):
+        scale = 2/(self.zoom)
+        #print(str(p_widg.x())+" "+str(p_widg.y()))
+        #print(str((p_widg.x()-self.w/2)*scale)+" "+str((p_widg.y()-self.h/2)*scale))
+        x = (p_widg.x()-self.w/2)*scale
+        y = (p_widg.y()-self.h/2)*scale
+        return QPointF(x,y)
 
     def normalizeAngle(self, angle):
         while angle < 0:
@@ -359,8 +335,3 @@ class GLWidget(QOpenGLWidget):
         gl.glColor4f(c.redF(), c.greenF(), c.blueF(), c.alphaF())  
 
 
-if __name__ == "__main__":
-    app = QtWidgets.QApplication(sys.argv)
-    window = GLWidget()
-    window.show()
-    sys.exit(app.exec_())
