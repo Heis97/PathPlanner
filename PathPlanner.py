@@ -1,7 +1,4 @@
-
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy import interpolate
 import random
 from opengl2_viewer import Paint_in_GL, Point3D, PrimitiveType,GLWidget,QtWidgets
 import sys
@@ -19,10 +16,7 @@ def rotate_list_points(points: "list[Point3D]", alfa: float):
         p_r_x, p_r_y = rotate_point(points[i].x, points[i].y, alfa)
         point_rot = Point3D(p_r_x, p_r_y, points[i].z)
         rotated_points.append(point_rot)
-    return rotated_points
-
-        
-        
+    return rotated_points                
 
 def plane_equation (normal: Point3D, vector_x: Point3D, point: Point3D):
     x1 = normal.x + point.x
@@ -92,7 +86,6 @@ def comp_normal_in_area(pol_list: "list[Polygon3D]"):
     else:
         return Point3D(0, 0, 1)
 
-
 def createFrame(matrix,dim:float):
     p1 = Point3D(matrix[0][3],matrix[1][3],matrix[2][3])
     p2 = Point3D(dim*matrix[0][0],dim*matrix[0][1],dim*matrix[0][2])
@@ -106,6 +99,7 @@ def createFrame(matrix,dim:float):
     ps.append(p1) 
     ps.append(p1+p4) 
     return ps
+
 def computeYvector(rx:Point3D,rz:Point3D):
     x = rz.y*rx.z-rz.z*rx.y
     y = rz.z*rx.x-rz.x*rx.z
@@ -117,16 +111,22 @@ def computeXvector(p1:Point3D,p2:Point3D):
     pd = pd.normalyse()
     return pd
 
+def computeXvectorRob(normal:Point3D):
+    vector_x =  Point3D(-1,0,0)
+    y = (normal*vector_x).normalyse()
+    x = (y*normal).normalyse()
+
+    return x
+
+
+
 def matrix_of_rotation(traj:"list[Point3D]",normals:"list[Point3D]", mesh: Mesh3D):
     matr_arr = []
-    for i in range(len(traj)-1):
-        rx = computeXvector(traj[i],traj[i+1])
-        #rz = comp_normal_in_area(area_around_point(mesh, traj[i], 2.5))
-        #rz = correct_normal(rz, rx, traj[i])
+    for i in range(len(traj)):
+        rx = computeXvectorRob(normals[i])
         rz = correct_normal_cross(normals[i], rx)
         ry = (rz*rx).normalyse()
         matr = [[rx.x,rx.y,rx.z,traj[i].x],[ry.x,ry.y,ry.z,traj[i].y],[rz.x,rz.y,rz.z,traj[i].z],[0,0,0,1]]
-        #matr = [[rx.x,ry.x,rz.x,traj[i].x],[rx.y,ry.y,rz.y,traj[i].y],[rx.z,ry.z,rz.z,traj[i].z],[0,0,0,1]]
         matr_arr.append(matr)
     return matr_arr
 
@@ -162,7 +162,7 @@ def GenerateContour(n: int,rad:float,delt:float)->"list[Point3D]":
         contour.append(Point3D(x, y, 0))
     return contour
 
-def divideTraj(s: "list[Point3D]", step: float):
+def divideTraj(s: "list[Point3D]", step: float)->"list[Point3D]":
     cont_traj = []
     for i in range(len(s)-1):
         cont_traj.append(s[i])
@@ -177,6 +177,15 @@ def divideTraj(s: "list[Point3D]", step: float):
                 z = s[i].z +(step*j*(s[i+1].z - s[i].z))/dist
                 cont_traj.append(Point3D(x,y,z))
 
+    return cont_traj
+
+def filterTraj(s: "list[Point3D]", filt: float)->"list[Point3D]":
+    cont_traj = []
+    for i in range(len(s)-1):
+        dist2 = (s[i+1].x-s[i].x)**2+(s[i+1].y-s[i].y)**2+(s[i+1].z-s[i].z)**2
+        dist = np.sqrt(dist2)      
+        if(dist>filt):
+            cont_traj.append(s[i])
     return cont_traj
 
 def FindPoints_for_line(contour: "list[Point3D]", y: float):
@@ -357,14 +366,15 @@ def surface(kernelSize:int = 3):
     # function for Z values
     def f(x, y):
         noise = random.uniform(-5,5)
-        vyr =0.3*( 0.5*(((x**2)/20) - ((y**2)/4))+0.5*x+noise)
-        #vyr  = 1.+0*x+0*y
+        noise = 0
+        vyr =10+0.3*( 0.2*(((x**2)/20) - ((y**2)/4))+0.5*x+noise)
+        #vyr  = 10.+0*x+0*y
         return vyr
 
     # x and y values
     #создаём "случайную" поверхность"
-    x = np.linspace(-10, 10, 40) # нижний предел, верхний предел, кол-во - с одинаковым шагом
-    y = np.linspace(-10, 10, 40)
+    x = np.linspace(-30, 30,20) # нижний предел, верхний предел, кол-во - с одинаковым шагом
+    y = np.linspace(-30, 30, 20)
 
     X, Y = np.meshgrid(x, y)
   
@@ -377,11 +387,10 @@ def surface(kernelSize:int = 3):
    # для получения результирующего (после применения функции скользящего среднего) массива
     offset = int((kernelSize - 1)/2) 
     ar = pass_array_center(Z, kernelSize,kernelSize)
-    ax = plt.axes(projection='3d')
     X_cutted = cut_array(X, offset) # удаление невычисленных значений для соблюдения размеров массивов для построения пов-ти
     Y_cutted = cut_array(Y, offset)
     ar_cutted = cut_array(ar, offset)
-    Z_cutted = cut_array(Z, offset)
+    #Z_cutted = cut_array(Z, offset)
     #print("z0:" + str(Z[0][0]))
     #print("ar_cutted0:" + str(ar_cutted[0][0]))
     #сгенерированная сетка, сглаженная сетка
@@ -424,10 +433,10 @@ def draw_frame(matr: "list[Point3D]", windowGL: GLWidget):
 def angles_of_extruder(list_of_matr: "list[list[list[float]]]"):
     list_of_angles = []
     for i in range (len(list_of_matr)):
-        B = np.arcsin (list_of_matr[i][2][0])
-        C = np.arcsin((list_of_matr[i][2][1])/np.cos(B))
-        A = np.arcsin((list_of_matr[i][1][0])/np.cos(B))
-        list_of_angles.append([list_of_matr[i][0][3],list_of_matr[i][1][3], list_of_matr[i][2][3], A, B, C])
+        b = np.arcsin (list_of_matr[i][2][0])
+        c = -np.arcsin((list_of_matr[i][2][1])/np.cos(b))
+        a = np.arcsin((list_of_matr[i][1][0])/np.cos(b))
+        list_of_angles.append([list_of_matr[i][0][3],list_of_matr[i][1][3], list_of_matr[i][2][3], a, b, c])
     return list_of_angles
 
 def push_string(value_of_matr: "list[list[float]]"):
@@ -442,8 +451,9 @@ def Generate_one_layer_traj (contour: "list[Point3D]", step: float, alfa: float,
     
     traj = GeneratePositionTrajectory_angle(contour, step, alfa)
     div_tr = divideTraj(traj, div_step)
+    fil_tr = divideTraj(div_tr, div_step/2)
 
-    mesh3d_1 = Mesh3D(div_tr,PrimitiveType.lines)
+    mesh3d_1 = Mesh3D(fil_tr,PrimitiveType.lines)
     
     proj_traj,normal_arr = projection(surface,  mesh3d_1, zet,r,g,b)
     proj_traj[0].z += trans
@@ -455,9 +465,27 @@ def Generate_one_layer_traj (contour: "list[Point3D]", step: float, alfa: float,
     matrs =  matrix_of_rotation(proj_traj,normal_arr, surface)
     return  proj_traj,normal_arr, matrs
 
+def filResTraj(filt:float,proj_traj: "list[Point3D]",normal_arr,matrs):
+    proj_traj_f = []
+    normal_arr_f = []
+    matrs_f = []
+    proj_traj_f.append(proj_traj[0])
+    normal_arr_f.append(normal_arr[0])
+    matrs_f.append(matrs[0])
+    for i in range(1,len(proj_traj)):
+        dist = distance( proj_traj_f[-1],proj_traj[i])
+        if dist>filt:
+            proj_traj_f.append(proj_traj[i])
+            normal_arr_f.append(normal_arr[i])
+            matrs_f.append(matrs[i])
+
+    return proj_traj_f,normal_arr_f, matrs_f
+        
+
+
 def Generate_multiLayer (contour: "list[Point3D]", step: float, alfa: float, surface: Mesh3D, div_step: float, zet: float, amount: int, trans: float):
     colors = [[0.,0.5,0.5],[1.,0.5,0.5],[0.,1.0,0.5],[0.,0.5,1.0],[0.,0.5,0.5],[0.,0.5,0.5],[0.,0.5,0.5],[0.,0.5,0.5]]
-    proj_traj = []
+    proj_traj:"list[Point3D]" = []
     normal_arr = []
     matrs = []
     
@@ -470,8 +498,33 @@ def Generate_multiLayer (contour: "list[Point3D]", step: float, alfa: float, sur
         normal_arr += n
         matrs += m
         
-    return proj_traj,normal_arr, matrs
+    return filResTraj(step/2,proj_traj,normal_arr, matrs)
 
+def saveTrajTxt(traj:"list[Point3D]",list_of_matr: "list[list[list[float]]]",name:str):
+    f1=open(name+'.txt','w')
+    i1=0
+    v = 20
+    for i in range(len(traj)):
+        x = traj[i].x
+        y = traj[i].y
+        z = traj[i].z
+        b = np.arcsin (list_of_matr[i][2][0])
+        a = 0
+        c = 0
+        if np.cos(b)!=0:
+            c = -np.arcsin((list_of_matr[i][2][1])/np.cos(b))
+            a = np.arcsin((list_of_matr[i][1][0])/np.cos(b))
+
+        e = 0
+        if  traj[i].extrude:
+            e = 1
+
+        f1.write('  X '+str(round(x,4))+', Y '+str(round(y,4))+', Z '+str(round(z,4))+
+                    ',  A '+str(round(a,4))+', B '+str(round(b,4))+', C '+str(round(c,4))+
+                    ', V '+str(round(v,4))+', D '+str(round(e,4))+'  \n')
+
+    f1.write('q\n')
+    f1.close()
 
 def main():
     # позволяет оконному приложени работать (почитать про это)
@@ -482,7 +535,7 @@ def main():
     #window.paint_objs.append(Paint_in_GL(0,1,0,2,1,koords,PrimitiveType.lines))
 
     #orig,smooth1 = surface(3)
-    orig,smooth2 = surface(11)
+    orig,smooth2 = surface()
     #из трёх отдельных двухмерных массив создаём общий двухмерный масиив точек
     koords3 = arrayViewer_GL_2d(smooth2[0],smooth2[1],smooth2[2], 0)
     koordsorig = arrayViewer_GL_2d(orig[0],orig[1],orig[2], 30)
@@ -491,44 +544,24 @@ def main():
     mesh3=  window.gridToTriangleMesh(koords3)
     mesh3d_surface = Mesh3D(mesh3,PrimitiveType.triangles)
     meshorig=  window.gridToTriangleMesh(koordsorig)
-    extruder_m = window.extract_coords_from_stl("extruder.stl")
+   
 
-    cont = GenerateContour(20,2,0.2) 
+    cont = GenerateContour(20,15,3) 
 
-    '''traj = GeneratePositionTrajectory_angle(cont,0.3, np.pi/6)
-    div_tr = divideTraj(traj,0.3)
-
-    mesh3d_1 = Mesh3D(div_tr,PrimitiveType.lines)
-    mesh3d_2 = Mesh3D(mesh3,PrimitiveType.triangles)
-    mesh3d_orig = Mesh3D(meshorig,PrimitiveType.triangles)
     
-    proj_traj,normal_arr = projection(mesh3d_2,  mesh3d_1)
-    matrs =  matrix_of_rotation(proj_traj,normal_arr, mesh3d_2)'''
-    extruder_mesh = Mesh3D( extruder_m,PrimitiveType.triangles)
-  
+
+    proj_traj,normal_arr, matrs = Generate_multiLayer(cont, 1.6, np.pi/2, mesh3d_surface, 1.3, 0.1, 2, 5)
+    saveTrajTxt(proj_traj,matrs,"traj_test2")
 
 
-    proj_traj,normal_arr, matrs = Generate_multiLayer(cont, 0.3, np.pi/2, mesh3d_surface, 0.3, 0.1, 4, 3)
-
-    #for i in range (int(len(matrs)/10)):
-        #draw_frame(matrs[i*10], window)
-
+    extruder_m = window.extract_coords_from_stl("extruder.stl")
     mesh3d_traj = Mesh3D(proj_traj,PrimitiveType.lines)
     window.paint_objs.append(Paint_in_GL(0.5,1,0.5,5,PrimitiveType.lines,mesh3d_traj))
-    test_matr = []
-    matrs.append
-    list_angl = angles_of_extruder(matrs)
-    #print(push_string(list_angl))
-    
-    print(push_string(matrs[20]))
 
-    extruder_mesh.scaleMesh(0.01)
+    extruder_mesh = Mesh3D( extruder_m,PrimitiveType.triangles)
+    #extruder_mesh.scaleMesh(0.01)
     extruder_mesh.invertMormals()
-    #matrSc = [[1,0,0,0],[0,1,0,0],[0,0,1,-3],[0,0,0,1]]
-    extruder_mesh.setTransform(matrs[20])
-    #mesh2.save("mesh2")
-    #отрисовка объектов
-    #window.paint_objs.append(Paint_in_GL(1,0,0,1,PrimitiveType.lines,mesh3d_1))
+    extruder_mesh.setTransform(matrs[0])
     window.paint_objs.append(Paint_in_GL(0.5,0.5,0,1,PrimitiveType.triangles,mesh3d_surface))
     
     glObjExtr = Paint_in_GL(0.2,0.2,0.2,1,PrimitiveType.triangles,extruder_mesh)
