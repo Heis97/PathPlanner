@@ -1,8 +1,6 @@
 import numpy as np
 import random
-from Viewer3D_GL import Paint_in_GL, Point3D, PrimitiveType,GLWidget,QtWidgets
-import sys
-
+from Viewer3D_GL import Paint_in_GL, Point3D, PrimitiveType,GLWidget
 from polygon import Mesh3D, Polygon3D
 
 def rotate_point(x: float, y: float, alfa: float):
@@ -17,6 +15,21 @@ def rotate_list_points(points: "list[Point3D]", alfa: float):
         point_rot = Point3D(p_r_x, p_r_y, points[i].z)
         rotated_points.append(point_rot)
     return rotated_points                
+
+def rasterxyMesh3D(mesh:Mesh3D,resolution:float):
+    minX, maxX,minY,maxY = findGabPol(mesh.polygons)
+    mapXY:"list[list[int]]" = []*int(200/resolution)
+    for i in range(int(200/resolution)):
+        mapXY.append([0]*int(200/resolution))
+    for i in range(len(mesh.polygons)):
+        minX, maxX,minY,maxY = findGab(mesh.polygons[i].vert_arr)
+        for x in range(int(minX/resolution),int(maxX/resolution)):
+            for y in range(int(minY/resolution),int(maxY/resolution)):                    
+                mapXY[x][y] = i
+
+    
+    return mapXY
+
 
 def plane_equation (normal: Point3D, vector_x: Point3D, point: Point3D):
     x1 = normal.x + point.x
@@ -130,14 +143,14 @@ def matrix_of_rotation(traj:"list[Point3D]",normals:"list[Point3D]", mesh: Mesh3
         matr_arr.append(matr)
     return matr_arr
 
-def projection(mesh: Mesh3D, traj: Mesh3D, zet: float, r:float,g:float,b:float)->"tuple[list[Point3D],list[Point3D]]":
+def projection(mesh: Mesh3D, traj: Mesh3D, zet: float, r:float,g:float,b:float,mapxy:"list[list[int]]"=None,resolution:float = 1.0)->"tuple[list[Point3D],list[Point3D]]":
     traj_proj_arr_:list[Point3D] = []
     traj_proj_arr_n:list[Point3D] = []
     deb_i = int(len(traj.polygons)/10)
     deb_i_all = deb_i
     deb_proc = 0
     for i in range (len(traj.polygons)):
-        p,n = point_on_triangle(mesh, traj.polygons[i])
+        p,n = point_on_triangleMAP(mesh, traj.polygons[i],mapxy,resolution)
         p.z+= zet
         p.r = r
         p.g = g
@@ -149,6 +162,23 @@ def projection(mesh: Mesh3D, traj: Mesh3D, zet: float, r:float,g:float,b:float)-
             deb_proc+=10
             print("proj "+str(deb_proc)+" /100 done")
     return traj_proj_arr_,traj_proj_arr_n
+
+def point_on_triangle(mesh: Mesh3D, polygon: Polygon3D)->"tuple[Point3D,Point3D]":
+    p = polygon.vert_arr[0]
+    for i in range (len(mesh.polygons)):
+        detect = mesh.polygons[i].affilationPoint(p)
+        if detect == True:
+            return mesh.polygons[i].project_point(p), mesh.polygons[i].n
+
+def point_on_triangleMAP(mesh: Mesh3D, polygon: Polygon3D,mapxy:"list[list[int]]",resolution:float = 1.0)->"tuple[Point3D,Point3D]":
+    p = polygon.vert_arr[0]
+    x = int(p.x/resolution)
+    y = int(p.y/resolution)
+    i = mapxy[x][y]
+    return mesh.polygons[i].project_point(p), mesh.polygons[i].n
+
+            
+    
 
 def findGab(cont:"list[Point3D]"):
     minX = 100000
@@ -165,10 +195,27 @@ def findGab(cont:"list[Point3D]"):
             minX = cont[i].x
         if(cont[i].y<minY):
             minY = cont[i].y
-    print(minX)
-    print(maxX)
-    print(minY)
-    print(maxY)
+
+    return minX, maxX,minY,maxY
+
+def findGabPol(pol:"list[Polygon3D]"):
+    minX = 100000
+    minY = 100000
+    maxX = -100000
+    maxY = -100000
+
+    for i in range(len(pol)):
+        cont = pol[i].vert_arr[0]
+        if(cont.x>maxX):
+            maxX = cont.x
+        if(cont.y>maxY):
+            maxY = cont.y
+
+        if(cont.x<minX):
+            minX = cont.x
+        if(cont.y<minY):
+            minY = cont.y
+
     return minX, maxX,minY,maxY
 
 def affilPoint(p:Point3D,minX, maxX,minY,maxY)->bool:
@@ -199,13 +246,7 @@ def cutMesh(mesh: Mesh3D,cont:"list[Point3D]")->Mesh3D:
 
 
 
-def point_on_triangle(mesh: Mesh3D, polygon: Polygon3D)->"tuple[Point3D,Point3D]":
-    p = polygon.vert_arr[0]
-    for i in range (len(mesh.polygons)):
-        detect = mesh.polygons[i].affilationPoint(p)
-        if detect == True:
-            return mesh.polygons[i].project_point(p), mesh.polygons[i].n
-    
+
 
 def GenerateContour(n: int,rad:float,delt:float)->"list[Point3D]":
     step = 2*np.pi/n
@@ -424,13 +465,13 @@ def surface(kernelSize:int = 3):
         noise = random.uniform(-5,5)
         noise = 0
         vyr =10+0.3*( 0.2*(((x**2)/20) - ((y**2)/4))+0.5*x+noise)
-        #vyr  = 10.+0*x+0*y
+        #vyr  = 10.+0.02*x**2+0.02*y**2
         return vyr
 
     # x and y values
     #создаём "случайную" поверхность"
-    x = np.linspace(-30, 30,20) # нижний предел, верхний предел, кол-во - с одинаковым шагом
-    y = np.linspace(-30, 30, 20)
+    x = np.linspace(-30, 30,80) # нижний предел, верхний предел, кол-во - с одинаковым шагом
+    y = np.linspace(-30, 30, 80)
 
     X, Y = np.meshgrid(x, y)
   
@@ -509,16 +550,16 @@ def ToStringList(cont:"list[Point3D]"):
             text+=cont[i].ToString()+" \n"
         return text
 
-def Generate_one_layer_traj (contour: "list[Point3D]", step: float, alfa: float, surface: Mesh3D, div_step: float, zet: float, trans: float, r:float,g:float,b:float):
+def Generate_one_layer_traj (contour: "list[Point3D]", step: float, alfa: float, surface: Mesh3D, div_step: float, zet: float, trans: float, r:float,g:float,b:float,mapxy:"list[list[int]]"=None,resolution:float = 1.):
     print("start gen Layer")
     traj = GeneratePositionTrajectory_angle(contour, step, alfa)
     print("GeneratePositionTrajectory Done "+ str(len(traj))+" len")
     div_tr = divideTraj(traj, div_step)
     fil_tr = divideTraj(div_tr, div_step/2)
     print("divideTraj Done")
-    mesh3d_1 = Mesh3D(fil_tr,PrimitiveType.lines)
+    mesh_trj = Mesh3D(fil_tr,PrimitiveType.lines)
     print("Mesh3D Done")
-    proj_traj,normal_arr = projection(surface,  mesh3d_1, zet,r,g,b)
+    proj_traj,normal_arr = projection(surface,  mesh_trj, zet,r,g,b,mapxy,resolution)
     print("projection Done")
     proj_traj[0].z += trans
     proj_traj[-1].z += trans
@@ -546,7 +587,14 @@ def filResTraj(filt:float,proj_traj: "list[Point3D]",normal_arr,matrs):
 
     return proj_traj_f,normal_arr_f, matrs_f
         
-
+def gaussMesh(mesh:Mesh3D, mapxy:"list[list[int]]"=None,wind:int = 30):
+    for y in range(wind,len(mapxy)-wind):
+        for x in range(wind,len(mapxy[y])-wind):
+            gauss_n  = Point3D(0,0,0)
+            for y1 in range(y-wind,y+wind):
+                for x1 in range(x-wind,x+wind):
+                    gauss_n += mesh.polygons[mapxy[x][y]].n
+            mesh.polygons[mapxy[x][y]].n = gauss_n.normalyse()
 
 def Generate_multiLayer (contour: "list[Point3D]", step: float, alfa: float, surface: Mesh3D, div_step: float, zet: float, amount: int, trans: float):
     colors = [[0.,0.5,0.5],[1.,0.5,0.5],[0.,1.0,0.5],[0.,0.5,1.0],[0.,0.5,0.5],[0.,0.5,0.5],[0.,0.5,0.5],[0.,0.5,0.5]]
@@ -555,12 +603,17 @@ def Generate_multiLayer (contour: "list[Point3D]", step: float, alfa: float, sur
     matrs = []
     cut_mesh = cutMesh(surface,contour)
     cut_mesh.save("cutted")
+    
+    resol = 0.01
+    mapxy = rasterxyMesh3D(cut_mesh,resol)
+    gs_mesh = gaussMesh(cut_mesh,mapxy)
+    #print(mapxy)
     print("cut_mesh_len:"+str(len(cut_mesh.polygons)) )
     for i in range (amount):
         alfa2 = alfa
         if i % 2 == 0:
             alfa2 += np.pi/2
-        p, n, m = Generate_one_layer_traj (contour, step, alfa2, cut_mesh , div_step, zet*(i+1), trans,colors[i][0],colors[i][1],colors[i][2])
+        p, n, m = Generate_one_layer_traj (contour, step, alfa2, gs_mesh , div_step, zet*(i+1), trans,colors[i][0],colors[i][1],colors[i][2],mapxy,resol)
         proj_traj += p
         normal_arr += n
         matrs += m

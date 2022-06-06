@@ -62,7 +62,7 @@ class PathPlannerWidg(QtWidgets.QWidget):
 
         self.lin_mod = QtWidgets.QLineEdit(self)
         self.lin_mod.setGeometry(QtCore.QRect(0, 150, 200, 30))
-        self.lin_mod.setText("test_0.1_0.9_0.1.stl")
+        self.lin_mod.setText("test_0.5_0.5_0.5.stl")
 
         self.lin_traj = QtWidgets.QLineEdit(self)
         self.lin_traj.setGeometry(QtCore.QRect(0, 180, 200, 30))
@@ -76,6 +76,8 @@ class PathPlannerWidg(QtWidgets.QWidget):
         self.ppw.paint_objs = []
         self.ppw.paint_objs.append(Viewer3D_GL.Paint_in_GL(0.5,0.5,0,1,PrimitiveType.triangles,mesh))
         gc.collect()
+
+    
 
 
     def compPlan(self):
